@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F0F0F0">
+
+    <!-- 顶部工具栏，用于放置菜单 -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/gameToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_alignParentTop="true"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+    <!-- 底部待选拼图块区域，使用 RecyclerView 实现横向滚动 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/piecesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_alignParentBottom="true"
+        android:background="#FFFFFF"
+        android:padding="4dp"
+        android:scrollbars="horizontal" />
+
+    <!-- 中间的拼图板，使用 GridLayout -->
+    <GridLayout
+        android:id="@+id/puzzleBoard"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/piecesRecyclerView"
+        android:layout_below="@id/gameToolbar"
+        android:layout_margin="16dp"
+        android:alignmentMode="alignMargins" />
+
+    <!-- 游戏结束时的结算界面 -->
+    <LinearLayout
+        android:id="@+id/completionLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="24dp"
+        android:background="@drawable/gradient_background"
+        android:visibility="gone"> <!-- 默认隐藏 -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="恭喜通关！"
+            android:textColor="@android:color/white"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/totalTimeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="总用时: 00:00"
+            android:textColor="@android:color/white"
+            android:textSize="20sp" />
+    </LinearLayout>
+
+</RelativeLayout>
