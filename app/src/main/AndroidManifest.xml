@@ -17,8 +17,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".GamePreLaunchActivity" />
-        <activity android:name=".GamePlayActivity" />
+        <activity
+            android:name=".GamePreLaunchActivity" />
+        <activity
+            android:name=".GamePlayActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PuzzleDemo001.NoActionBar">
+        </activity>
     </application>
 
 </manifest>
