@@ -11,7 +11,7 @@ public class PuzzlePiece {
     public PuzzlePiece(Bitmap pieceBitmap, int originalIndex) {
         this.pieceBitmap = pieceBitmap;
         this.originalIndex = originalIndex;
-        this.currentIndex = originalIndex; // Initially, current index is the same as original
+        this.currentIndex = -1;
     }
 
     public Bitmap getPieceBitmap() {

@@ -66,7 +66,12 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
             notifyItemRangeChanged(position, pieces.size());
         }
     }
-
+    public void undoPiece(PuzzlePiece piece) {
+        if(piece!=null){
+            piece.setCurrentIndex(-1);
+            pieces.add(piece);
+        }
+    }
     @Override
     public int getItemCount() {
         return pieces.size();

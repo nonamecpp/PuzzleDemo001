@@ -2,66 +2,114 @@ package com.example.puzzledemo001;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import androidx.core.content.ContextCompat;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ImageSplitter {
 
     /**
-     * A simplified and robust method to split an image.
-     * It creates a single, perfectly-sized bitmap and cuts from it, avoiding complex scaling and recycling.
+     * Overloaded method to split an image from a URI.
+     */
+    public static List<PuzzlePiece> splitImage(Context context, Uri imageUri, int difficulty) {
+        try {
+            InputStream inputStream = context.getContentResolver().openInputStream(imageUri);
+            Bitmap originalBitmap = BitmapFactory.decodeStream(inputStream);
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            if (originalBitmap == null) return new ArrayList<>(); // Return empty if bitmap fails to decode
+
+            return splitBitmap(originalBitmap, difficulty);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>(); // Return empty list on any error
+        }
+    }
+
+    /**
+     * Overloaded method to split an image from a drawable resource.
      */
     public static List<PuzzlePiece> splitImage(Context context, int drawableId, int difficulty) {
+        Bitmap originalBitmap = drawableToBitmap(context, drawableId);
+        if (originalBitmap == null) {
+            return new ArrayList<>();
+        }
+        return splitBitmap(originalBitmap, difficulty);
+    }
+
+    /**
+     * The core splitting logic that works with a Bitmap.
+     */
+    private static List<PuzzlePiece> splitBitmap(Bitmap originalBitmap, int difficulty) {
         ArrayList<PuzzlePiece> pieces = new ArrayList<>();
 
-        Drawable drawable = ContextCompat.getDrawable(context, drawableId);
-        if (drawable == null) {
-            return pieces; // Return empty if drawable not found
+        int originalWidth = originalBitmap.getWidth();
+        int originalHeight = originalBitmap.getHeight();
+
+        int divisibleWidth = (originalWidth / difficulty) * difficulty;
+        int divisibleHeight = (originalHeight / difficulty) * difficulty;
+
+        if (divisibleWidth == 0 || divisibleHeight == 0) {
+            originalBitmap.recycle();
+            return pieces;
         }
 
-        // Define a base size. Using a fixed large size is safer than relying on intrinsic dimensions for shapes.
-        int baseSize = 600; 
-
-        // Calculate the final board size to be perfectly divisible.
-        int boardWidth = (baseSize / difficulty) * difficulty;
-        int boardHeight = (baseSize / difficulty) * difficulty;
-
-        // This check is a safeguard, though with a base size of 600 it's unlikely to be triggered.
-        if (boardWidth == 0 || boardHeight == 0) {
-            return pieces; 
+        Bitmap scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, divisibleWidth, divisibleHeight, true);
+        if (originalBitmap != scaledBitmap) {
+            originalBitmap.recycle(); // Recycle original if it was scaled
         }
 
-        // 1. Create the final bitmap ONCE, with the perfect dimensions.
-        Bitmap boardBitmap = Bitmap.createBitmap(boardWidth, boardHeight, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(boardBitmap);
+        int pieceWidth = divisibleWidth / difficulty;
+        int pieceHeight = divisibleHeight / difficulty;
 
-        // 2. Draw the source drawable onto the canvas, scaling it to fit the board dimensions.
-        drawable.setBounds(0, 0, boardWidth, boardHeight);
-        drawable.draw(canvas);
-
-        // 3. Now, cut from this clean, perfectly-sized bitmap. All calculations will be exact.
-        int pieceWidth = boardWidth / difficulty;
-        int pieceHeight = boardHeight / difficulty;
-
-        int pieceNumber = 0; // The missing variable declaration that caused the compile error.
-
+        int pieceNumber = 0;
         for (int row = 0; row < difficulty; row++) {
             for (int col = 0; col < difficulty; col++) {
                 int x = col * pieceWidth;
                 int y = row * pieceHeight;
 
-                Bitmap pieceBitmap = Bitmap.createBitmap(boardBitmap, x, y, pieceWidth, pieceHeight);
+                Bitmap pieceBitmap = Bitmap.createBitmap(scaledBitmap, x, y, pieceWidth, pieceHeight);
                 PuzzlePiece piece = new PuzzlePiece(pieceBitmap, pieceNumber);
                 pieces.add(piece);
                 pieceNumber++;
             }
         }
 
-        // Let the Garbage Collector manage all bitmaps. No manual .recycle() calls.
+        scaledBitmap.recycle();
         return pieces;
+    }
+
+
+    /**
+     * Converts a drawable resource to a Bitmap. (Internal helper)
+     */
+    private static Bitmap drawableToBitmap(Context context, int drawableId) {
+        Drawable drawable = ContextCompat.getDrawable(context, drawableId);
+        if (drawable == null) {
+            return null;
+        }
+
+        int width = drawable.getIntrinsicWidth();
+        int height = drawable.getIntrinsicHeight();
+
+        if (width <= 0 || height <= 0) {
+            width = 600;
+            height = 600;
+        }
+
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+
+        return bitmap;
     }
 }

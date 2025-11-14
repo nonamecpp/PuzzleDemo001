@@ -2,6 +2,7 @@ package com.example.puzzledemo001;
 
 import android.content.ClipData;
 import android.content.ClipDescription;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -21,12 +22,19 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.Locale;
 
 public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAdapter.OnPieceClickListener, View.OnDragListener {
 
+    private Random random = new Random();
+    private int[] dx = {0, 0, 1, -1};
+    private int[] dy = {1, -1, 0, 0};
     private int difficulty;
+    private String imageUriString; // To receive the image URI from the previous activity
+
     private GridLayout puzzleBoard;
     private RecyclerView piecesRecyclerView;
     private Toolbar gameToolbar;
@@ -35,6 +43,8 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
 
     private PuzzlePieceAdapter pieceAdapter;
     private List<PuzzlePiece> puzzlePieces;
+    private List<PuzzlePiece> puzzlePiecesDone;
+    private int[][] puzzlePiecesDoneIndex;
     private int correctPiecesCount = 0;
 
     private long startTime;
@@ -50,27 +60,19 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Toast.makeText(this, "1. 进入关卡", Toast.LENGTH_SHORT).show();
         setContentView(R.layout.activity_game_play);
 
-        Toast.makeText(this, "2. 视图已加载", Toast.LENGTH_SHORT).show();
         initializeViews();
-
-        Toast.makeText(this, "3. 视图已初始化", Toast.LENGTH_SHORT).show();
         setSupportActionBar(gameToolbar);
 
+        // Receive data from Intent
         difficulty = getIntent().getIntExtra("difficulty", 3);
-
-        Toast.makeText(this, "4. 正在设置拼图板", Toast.LENGTH_SHORT).show();
+        imageUriString = getIntent().getStringExtra("imageUri");
+        puzzlePiecesDoneIndex = new int[difficulty][difficulty];
         setupPuzzleBoard();
-
-        Toast.makeText(this, "5. 正在设置拼图块列表", Toast.LENGTH_SHORT).show();
         piecesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
-        Toast.makeText(this, "6. 游戏即将开始", Toast.LENGTH_SHORT).show();
         startGame();
-        
-        Toast.makeText(this, "7. 关卡加载完成", Toast.LENGTH_SHORT).show();
     }
 
     private void initializeViews() {
@@ -99,11 +101,31 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             cell.setTag(i); // Tag the cell with its correct index
             cell.setOnDragListener(this);
             puzzleBoard.addView(cell);
+            puzzlePiecesDoneIndex[i/difficulty][i%difficulty] = -1;
         }
     }
 
     private void startGame() {
-        puzzlePieces = ImageSplitter.splitImage(this, R.drawable.default_puzzle_image, difficulty);
+        // Decide which image to use
+        if (imageUriString != null) {
+            puzzlePieces = ImageSplitter.splitImage(this, Uri.parse(imageUriString), difficulty);
+        } else {
+            puzzlePieces = ImageSplitter.splitImage(this, R.drawable.default_puzzle_image, difficulty);
+        }
+
+        // Check if splitting failed (e.g., invalid URI) and fall back to default
+        if (puzzlePieces == null || puzzlePieces.isEmpty()) {
+            Toast.makeText(this, "图片加载失败，使用默认图片", Toast.LENGTH_LONG).show();
+            puzzlePieces = ImageSplitter.splitImage(this, R.drawable.default_puzzle_image, difficulty);
+            if (puzzlePieces == null) { // If default also fails, show error and exit
+                Toast.makeText(this, "发生致命错误，无法加载游戏", Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
+        }
+
+        // Shuffle the pieces before displaying them
+        Collections.shuffle(puzzlePieces);
 
         pieceAdapter = new PuzzlePieceAdapter(puzzlePieces);
         pieceAdapter.setClickListener(this);
@@ -150,22 +172,16 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
 
                 int targetIndex = (int) targetCell.getTag();
 
-                if (draggedPiece.getOriginalIndex() == targetIndex) {
-                    targetCell.setImageBitmap(draggedPiece.getPieceBitmap());
-                    targetCell.setBackground(null);
-                    targetCell.setOnDragListener(null);
+                targetCell.setImageBitmap(draggedPiece.getPieceBitmap());
+                targetCell.setBackground(null);
+                targetCell.setOnDragListener(null);
 
-                    pieceAdapter.removePiece(position);
+                pieceAdapter.removePiece(position);
 
+                if (draggedPiece.getOriginalIndex() == targetIndex)
                     correctPiecesCount++;
-                    if (correctPiecesCount == difficulty * difficulty) {
-                        endGame();
-                    }
-
-                    return true;
-                } else {
-                    Toast.makeText(this, "位置不对哦!", Toast.LENGTH_SHORT).show();
-                    return false;
+                if (correctPiecesCount == difficulty * difficulty) {
+                    endGame();
                 }
 
             case DragEvent.ACTION_DRAG_ENDED:
@@ -179,6 +195,48 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             default:
                 return false;
         }
+    }
+    public void MovePiece(PuzzlePiece piece, int targetIndex) {
+        piece.setCurrentIndex(targetIndex);
+        puzzlePiecesDone.add(piece);
+        puzzlePiecesDoneIndex[targetIndex/difficulty][targetIndex%difficulty] = piece.getOriginalIndex();
+    }
+    public void undoPiece(PuzzlePiece piece, int originalIndex){
+        piece.setCurrentIndex(-1);
+        puzzlePieces.add(piece);
+        puzzlePiecesDoneIndex[originalIndex/difficulty][originalIndex%difficulty] = -1;
+    }
+    public pieceTip getTip() {
+        List<Integer>pobChoice = Collections.emptyList();
+        for(int i = 0; i < puzzlePiecesDone.size(); i++){
+            PuzzlePiece piece = puzzlePiecesDone.get(i);
+            if(!piece.isCorrect()){
+                return new pieceTip(false, i, piece.getOriginalIndex());
+            }
+        }
+        for(int i =0, k = 0;i<difficulty;i++){
+            for(int j=0;j<difficulty;j++,k++){
+                if(puzzlePiecesDoneIndex[i][j]!=k){
+                    for(int tmp = 0;tmp<4;tmp++){
+                        int nx = dx[tmp]+i;
+                        int ny = dy[tmp]+j;
+                        if(nx>=0&&nx<difficulty&&ny>=0&&ny<difficulty){
+                            if(puzzlePiecesDoneIndex[nx][ny]==k+dx[tmp]+dy[tmp]){
+                                pobChoice.add(new Integer(k));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        int optPosition = pobChoice.get(random.nextInt(pobChoice.size()));
+        for(int i = 0; i < puzzlePieces.size(); i++){
+            PuzzlePiece piece = puzzlePieces.get(i);
+            if(piece.getOriginalIndex() == optPosition){
+                return new pieceTip(true, i, optPosition);
+            }
+        }
+        return null;
     }
 
     private void endGame() {
@@ -205,12 +263,15 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
 
         if (itemId == R.id.action_undo) {
             Toast.makeText(this, "撤销操作待实现", Toast.LENGTH_SHORT).show();
+
             return true;
         } else if (itemId == R.id.action_solve) {
             Toast.makeText(this, "自动完成待实现", Toast.LENGTH_SHORT).show();
+
             return true;
         } else if (itemId == R.id.action_hint) {
             Toast.makeText(this, "提示功能待实现", Toast.LENGTH_SHORT).show();
+
             return true;
         } else {
             return super.onOptionsItemSelected(item);
