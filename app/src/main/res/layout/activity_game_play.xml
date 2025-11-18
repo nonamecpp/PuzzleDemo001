@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/game_background">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/gameToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        app:title="拼图游戏"
+        app:titleTextColor="@android:color/white" />
+
+    <LinearLayout
+        android:id="@+id/stats_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/gameToolbar"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/timerText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="计时: 00:00"
+            android:textColor="@android:color/white"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/movesText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="步数: 0"
+            android:textColor="@android:color/white"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <GridLayout
+        android:id="@+id/puzzleBoard"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_above="@+id/piecesRecyclerView"
+        android:layout_below="@+id/stats_container"
+        android:layout_margin="8dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/piecesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_alignParentBottom="true"
+        android:background="#80000000" />
+
+    <LinearLayout
+        android:id="@+id/completionLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="恭喜完成!"
+            android:textColor="@android:color/white"
+            android:textSize="32sp" />
+
+        <TextView
+            android:id="@+id/totalTimeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="@android:color/white"
+            android:textSize="22sp" />
+
+    </LinearLayout>
+
+</RelativeLayout>
