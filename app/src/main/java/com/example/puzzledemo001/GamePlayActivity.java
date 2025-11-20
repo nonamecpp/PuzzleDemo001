@@ -60,6 +60,8 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     private PuzzlePiece selectedPiece = null;
     private int selectedPiecePosition = -1;
     private View selectedPieceView = null;
+    private PuzzlePiece boardSelectedPiece = null;
+    private ImageView boardSelectedCellView = null;
 
     private long startTime;
     private Handler timerHandler = new Handler(Looper.getMainLooper());
@@ -216,18 +218,26 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             cell.setOnClickListener(this::handleCellClick);
 
             // Add long click listener for swapping pieces on the board
+            // Add long click listener for swapping/moving pieces on the board
             cell.setOnLongClickListener(v -> {
-                // Only allow swapping when all pieces are on the board
-                if (puzzlePieces.isEmpty()) {
-                    int sourceIndex = (int) v.getTag();
+                int sourceIndex = (int) v.getTag();
+                // 查找当前长按的格子上是否真的有碎片
+                PuzzlePiece sourcePiece = findPieceByCurrentIndex(sourceIndex);
+
+                // 新的逻辑：只要这个格子里确实有碎片，就允许启动拖拽
+                if (sourcePiece != null) {
                     ClipData.Item item = new ClipData.Item(Integer.toString(sourceIndex));
+                    // 使用 "board_piece" 标签来标识这次拖拽源自棋盘
                     ClipData dragData = new ClipData("board_piece", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
                     View.DragShadowBuilder myShadow = new View.DragShadowBuilder(v);
                     v.startDragAndDrop(dragData, myShadow, v, 0);
                     return true;
                 }
+
+                // 如果长按的是一个空格子，则不允许拖拽
                 return false;
             });
+
 
             puzzleBoard.addView(cell);
             puzzlePiecesDoneIndex[i/difficulty][i%difficulty] = -1;
@@ -317,47 +327,101 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         }
     }
 
-    private void handleCellClick(View v) {
-        if (selectedPiece == null) {
-            Toast.makeText(this, "请先选择一个拼图块", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        ImageView targetCell = (ImageView) v;
-        int targetIndex = (int) targetCell.getTag();
-        PuzzlePiece pieceToPlace = selectedPiece;
-
-        PuzzlePiece occupant = findPieceByCurrentIndex(targetIndex);
-
-        incrementMoves();
-
-        if (occupant != null) {
-            moveHistory.push(new ReplaceMove(pieceToPlace, occupant, targetIndex));
-            undoPiece(occupant, occupant.getCurrentIndex());
-        } else {
-            moveHistory.push(new PlaceMove(pieceToPlace, targetIndex));
-        }
-
-        targetCell.setImageBitmap(pieceToPlace.getPieceBitmap());
-        targetCell.setBackground(null);
-
-        MovePiece(pieceToPlace, targetIndex);
-        pieceAdapter.removePiece(selectedPiecePosition);
-
-        if(selectedPieceView != null) {
+    /**
+     * 清除底部待选列表的选择状态
+     */
+    private void clearBottomSelection() {
+        if (selectedPieceView != null) {
             selectedPieceView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.transparent));
         }
         selectedPiece = null;
         selectedPiecePosition = -1;
         selectedPieceView = null;
+    }
 
-        if (pieceToPlace.getOriginalIndex() == targetIndex) {
-            correctPiecesCount++;
+    /**
+     * 清除棋盘上的选择状态
+     */
+    private void clearBoardSelection() {
+        if (boardSelectedCellView != null) {
+            // 恢复之前选中格子的背景（如果它上面有图就设为null，没图就设为灰色）
+            if (boardSelectedCellView.getDrawable() != null) {
+                boardSelectedCellView.setBackground(null);
+            } else {
+                boardSelectedCellView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+            }
         }
-        if (puzzlePieces.isEmpty()) {
-            checkCompletion();
+        boardSelectedPiece = null;
+        boardSelectedCellView = null;
+    }
+
+
+    private void handleCellClick(View v) {
+        ImageView targetCell = (ImageView) v;
+        int targetIndex = (int) targetCell.getTag();
+        PuzzlePiece occupant = findPieceByCurrentIndex(targetIndex); // 查找当前格子上是否已有碎片
+
+        if (selectedPiece != null) {
+            // --- 逻辑分支 1: 手上已从底部列表选择了一个碎片 ---
+
+            if (occupant != null) {
+                // 目标格子已经有碎片了，执行【替换】逻辑
+                incrementMoves();
+                moveHistory.push(new ReplaceMove(selectedPiece, occupant, targetIndex));
+                undoPiece(occupant, occupant.getCurrentIndex());
+            } else {
+                // 目标格子是空的，执行【放置】逻辑
+                incrementMoves();
+                moveHistory.push(new PlaceMove(selectedPiece, targetIndex));
+            }
+
+            // 执行放置/替换的公共操作
+            targetCell.setImageBitmap(selectedPiece.getPieceBitmap());
+            targetCell.setBackground(null);
+            MovePiece(selectedPiece, targetIndex);
+            pieceAdapter.removePiece(selectedPiecePosition);
+
+            // 清空底部列表的选择状态
+            clearBottomSelection();
+
+            if (puzzlePieces.isEmpty()) {
+                checkCompletion();
+            }
+
+        } else {
+            // --- 逻辑分支 2: 手上没有选择任何碎片 (直接点击棋盘) ---
+
+            if (occupant == null) {
+                // 点击了一个空格子，手上又没牌，自然是无效操作
+                Toast.makeText(this, "请先从下方选择一个拼图块", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // 点击了一个已有碎片的格子
+            if (boardSelectedPiece == null) {
+                // A. 板上之前没有选中任何碎片，现在选中它
+                boardSelectedPiece = occupant;
+                boardSelectedCellView = targetCell;
+                // 添加高亮效果以提示用户
+                boardSelectedCellView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+                Toast.makeText(this, "已选中，请再点击另一块来交换", Toast.LENGTH_SHORT).show();
+            } else {
+                // B. 板上之前已经选中了一个碎片，现在执行【交换】
+                if (boardSelectedPiece == occupant) {
+                    // 点击了同一个碎片两次，视为【取消选择】
+                    clearBoardSelection();
+                } else {
+                    // 点击了不同的碎片，执行【交换】
+                    incrementMoves();
+                    moveHistory.push(new SwapMove(boardSelectedPiece, occupant));
+                    performSwap(boardSelectedPiece, boardSelectedPiece.getCurrentIndex(), occupant, targetIndex);
+                    // 交换后清空选择状态
+                    clearBoardSelection();
+                }
+            }
         }
     }
+
 
     private void checkCompletion() {
         if (!puzzlePieces.isEmpty()) return; // Don't check until all pieces are on the board
@@ -395,81 +459,127 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
 
     @Override
     public boolean onDrag(View v, DragEvent event) {
+        // 将 v 转换为目标单元格，这在大多数事件中都是安全的
         ImageView targetCell = (ImageView) v;
-        String clipLabel = event.getClipDescription().getLabel().toString();
 
         switch (event.getAction()) {
             case DragEvent.ACTION_DRAG_STARTED:
-                return event.getClipDescription().hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN);
+                ClipDescription description = event.getClipDescription();
+                if (description != null) {
+                    return description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN);
+                }
+                return false;
 
             case DragEvent.ACTION_DRAG_ENTERED:
                 targetCell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
                 return true;
 
             case DragEvent.ACTION_DRAG_EXITED:
-                 if (((ImageView)v).getDrawable() == null) {
+                if (((ImageView) v).getDrawable() == null) {
                     v.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
                 }
                 return true;
 
             case DragEvent.ACTION_DROP:
+                ClipDescription clipDescription = event.getClipDescription();
+                if (clipDescription == null) {
+                    return false;
+                }
+                String clipLabel = clipDescription.getLabel().toString();
                 int targetIndex = (int) targetCell.getTag();
+                PuzzlePiece targetOccupant = findPieceByCurrentIndex(targetIndex);
 
                 if ("board_piece".equals(clipLabel)) {
+                    // --- 板内拖拽逻辑 ---
                     int sourceIndex = Integer.parseInt(event.getClipData().getItemAt(0).getText().toString());
-                    if (sourceIndex == targetIndex) return true; // No move, no increment.
+                    if (sourceIndex == targetIndex) return true;
 
                     PuzzlePiece sourcePiece = findPieceByCurrentIndex(sourceIndex);
-                    PuzzlePiece targetPiece = findPieceByCurrentIndex(targetIndex);
 
-                    if (sourcePiece != null && targetPiece != null) {
+                    if (sourcePiece != null) {
                         incrementMoves();
-                        moveHistory.push(new SwapMove(sourcePiece, targetPiece));
-                        performSwap(sourcePiece, sourceIndex, targetPiece, targetIndex);
+                        if (targetOccupant != null) {
+                            // 场景1: 板上碎片拖到【已占用的格子】-> 执行交换
+                            moveHistory.push(new SwapMove(sourcePiece, targetOccupant));
+                            performSwap(sourcePiece, sourceIndex, targetOccupant, targetIndex);
+                        } else {
+                            // 场景2: 板上碎片拖到【空格子】-> 执行移动
+                            moveHistory.push(new PlaceMove(sourcePiece, targetIndex));
+
+                            // 1. 从模型中移除旧位置的记录
+                            puzzlePiecesDone.remove(sourcePiece);
+                            puzzlePiecesDoneIndex[sourceIndex / difficulty][sourceIndex % difficulty] = -1;
+
+                            // 2. 清理原格子的视觉效果
+                            ImageView sourceCell = puzzleBoard.findViewWithTag(sourceIndex);
+                            if (sourceCell != null) {
+                                sourceCell.setImageDrawable(null);
+                                sourceCell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+                            }
+
+                            // 3. 在新位置放置碎片 (视觉和数据)
+                            targetCell.setImageBitmap(sourcePiece.getPieceBitmap());
+                            targetCell.setBackground(null);
+                            MovePiece(sourcePiece, targetIndex);
+                        }
                     }
-                } else {
-                    incrementMoves();
+                } else { // 假定是从列表拖拽
+                    // --- 从列表拖拽到板上的逻辑 ---
                     ClipData.Item item = event.getClipData().getItemAt(0);
                     int position = Integer.parseInt(item.getText().toString());
-                    PuzzlePiece draggedPiece = pieceAdapter.getPiece(position);
 
-                    PuzzlePiece occupant = findPieceByCurrentIndex(targetIndex);
-                    if (occupant != null) {
-                        moveHistory.push(new ReplaceMove(draggedPiece, occupant, targetIndex));
-                        undoPiece(occupant, occupant.getCurrentIndex());
-                    } else {
-                        moveHistory.push(new PlaceMove(draggedPiece, targetIndex));
-                    }
+                    if (position >= 0 && position < pieceAdapter.getItemCount()) {
+                        PuzzlePiece draggedPiece = pieceAdapter.getPiece(position);
+                        if (draggedPiece != null) {
+                            incrementMoves();
 
-                    targetCell.setImageBitmap(draggedPiece.getPieceBitmap());
-                    targetCell.setBackground(null);
+                            if (targetOccupant != null) {
+                                // 场景3: 列表碎片拖到【已占用的格子】-> 执行"以物换物"
+                                moveHistory.push(new ReplaceMove(draggedPiece, targetOccupant, targetIndex));
 
-                    MovePiece(draggedPiece, targetIndex);
-                    pieceAdapter.removePiece(position);
+                                // 从板上数据模型移除被替换者
+                                puzzlePiecesDone.remove(targetOccupant);
 
-                    if (draggedPiece.getOriginalIndex() == targetIndex) {
-                        correctPiecesCount++;
-                    }
-                    if (puzzlePieces.isEmpty()) {
-                        checkCompletion();
+                                // --- 这里是修正点 ---
+                                // 2. 将 targetOccupant 添加回底部列表的数据源
+                                puzzlePieces.add(targetOccupant); // 直接操作 Activity 中的 puzzlePieces 列表
+                                pieceAdapter.notifyDataSetChanged(); // 通知适配器数据已改变，刷新整个列表
+                                // --- 修正结束 ---
+
+                            } else {
+                                // 场景4: 列表碎片拖到【空格子】-> 正常放置
+                                moveHistory.push(new PlaceMove(draggedPiece, targetIndex));
+                            }
+
+                            // 公共操作: 从底部列表移除拖拽的碎片，并在板上放置它
+                            pieceAdapter.removePiece(position);
+
+                            targetCell.setImageBitmap(draggedPiece.getPieceBitmap());
+                            targetCell.setBackground(null);
+                            MovePiece(draggedPiece, targetIndex);
+
+                            if (puzzlePieces.isEmpty()) {
+                                checkCompletion();
+                            }
+                        }
                     }
                 }
                 return true;
 
             case DragEvent.ACTION_DRAG_ENDED:
                 View draggedView = (View) event.getLocalState();
-                // This is the crucial fix. Only make the view visible again if the drop was UNSUCCESSFUL.
                 if (!event.getResult()) {
                     if (draggedView != null) {
                         draggedView.setVisibility(View.VISIBLE);
                     }
                 }
-
-                // Reset background color on all cells to default after drag ends
+                // 清理所有格子的背景高亮
                 for (int i = 0; i < puzzleBoard.getChildCount(); i++) {
                     View cell = puzzleBoard.getChildAt(i);
                     if (((ImageView) cell).getDrawable() == null) {
                         cell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+                    } else {
+                        cell.setBackground(null);
                     }
                 }
                 return true;
@@ -478,6 +588,10 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
                 return false;
         }
     }
+
+
+
+
 
     public void MovePiece(PuzzlePiece piece, int targetIndex) {
         piece.setCurrentIndex(targetIndex);
