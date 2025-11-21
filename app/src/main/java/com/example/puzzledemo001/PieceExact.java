@@ -8,6 +8,10 @@ public class PieceExact{
         this.PostionID = PostionID;
         this.type = type;
     }
+    public boolean equal(PieceExact piece){
+        if(piece == null)return false;
+        return piece.PostionID == this.PostionID && piece.type == this.type;
+    }
     public int getPostionID(){
         return PostionID;
     }

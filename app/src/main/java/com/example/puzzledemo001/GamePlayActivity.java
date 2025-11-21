@@ -56,10 +56,8 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     private int movesCount = 0; // To count user moves
 
     // Variables for click-to-place functionality
-    private PuzzlePiece selectedPiece = null;
-    private int selectedPiecePosition = -1;
-    private View selectedPieceView = null;
-
+    private PieceExact selectedPieceExactA = null;
+    private PieceExact selectedPieceExactB = null;
     private long startTime;
     private Handler timerHandler = new Handler(Looper.getMainLooper());
 
@@ -140,20 +138,29 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             cell.setOnClickListener(this::handleCellClick);
 
             // Add long click listener for swapping pieces on the board
+            // Add long click listener for swapping/moving pieces on the board
             cell.setOnLongClickListener(v -> {
-                // Only allow swapping when all pieces are on the board
-                if (puzzlePieces.isEmpty()) {
-                    int sourceIndex = (int) v.getTag();
+                int sourceIndex = (int) v.getTag();
+                // 查找当前长按的格子上是否真的有碎片
+                PuzzlePiece sourcePiece = findPieceByCurrentIndex(sourceIndex);
+
+                // 新的逻辑：只要这个格子里确实有碎片，就允许启动拖拽
+                if (sourcePiece != null) {
                     ClipData.Item item = new ClipData.Item(Integer.toString(sourceIndex));
+                    // 使用 "board_piece" 标签来标识这次拖拽源自棋盘
                     ClipData dragData = new ClipData("board_piece", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
                     View.DragShadowBuilder myShadow = new View.DragShadowBuilder(v);
                     v.startDragAndDrop(dragData, myShadow, v, 0);
                     return true;
                 }
+
+                // 如果长按的是一个空格子，则不允许拖拽
                 return false;
             });
 
+
             puzzleBoard.addView(cell);
+            puzzlePiecesDone[i] = null;
         }
     }
 
@@ -191,26 +198,99 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
 
         Toast.makeText(this, "游戏开始!", Toast.LENGTH_SHORT).show();
     }
+    private void darkenPieceBackground(PieceExact pieceExact){
+        View view = getExactpieceView(pieceExact);
+        view.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+    }
+    private int getExactpiecePosition(PieceExact pieceExact){
+        if(pieceExact == null)return -1;
+        if(pieceExact.getType() == PositionType.PieceInWait){
+            return getAdapterPiecePosition(pieceExact.getPostionID());
+        }
+        return pieceExact.getPostionID();
+    }
+    private View getExactpieceView(PieceExact  pieceExact){
+        if(pieceExact == null)return null;
+        View view = null;
+        if(pieceExact.getType() == PositionType.PieceInBoard){
+            view = getBoardViewByTag(pieceExact.getPostionID());
+        }
+        if(pieceExact.getType() == PositionType.PieceInWait){
+            view = piecesRecyclerView.getChildAt(getAdapterPiecePosition(pieceExact.getPostionID()));
+        }
+        return view;
+    }
+    @Override
+    public void onPieceClick(View view, int position) {
 
+        PuzzlePiece piece = pieceAdapter.getPiece(position);
+        if(selectedPieceExactA != null){
+            View v = getBoardViewByTag(getExactpiecePosition(selectedPieceExactA));
+            v.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+        }
+        selectedPieceExactA = new PieceExact(piece.getOriginalIndex(), PositionType.PieceInWait);
+        view.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+
+    }
+
+    private void handleCellClick(View v) {
+        ImageView targetCell = (ImageView) v;
+        int PositionID = (int) targetCell.getTag();
+        PuzzlePiece occupant = findPieceByCurrentIndex(PositionID); // 查找当前格子上是否已有碎片
+
+        if (selectedPieceExactA != null) {
+            selectedPieceExactB = new PieceExact(PositionID, PositionType.PieceInBoard);
+            darkenPieceBackground(selectedPieceExactA);
+
+            if(!selectedPieceExactB.equal(selectedPieceExactA))
+                PerformComplexMove(new PieceMovement(selectedPieceExactA, selectedPieceExactB));
+            selectedPieceExactA = selectedPieceExactB = null;
+
+        } else {
+            // --- 逻辑分支 2: 手上没有选择任何碎片 (直接点击棋盘) ---
+            if(occupant == null)return;
+            selectedPieceExactA = new PieceExact(PositionID, PositionType.PieceInBoard);
+            v.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+        }
+    }
     private void incrementMoves() {
         movesCount++;
         if (movesText != null) {
             movesText.setText("步数: " + movesCount);
         }
     }
-    private void UpdatePieceBoard(int position){
 
+    private void UpdatePieceBoard(View v, PuzzlePiece piece) {
+        // 1. 把 View 强转为 ImageView，这样才能设置图片
+        ImageView targetCell = (ImageView) v;
+
+        if (piece == null) {
+            // 如果传进来的 piece 是 null，说明要把这个格子清空
+            targetCell.setImageDrawable(null); // 清除图片
+            targetCell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray)); // 恢复灰色背景
+        } else {
+            // 如果有 piece，显示它的图片
+            targetCell.setImageBitmap(piece.getPieceBitmap());
+            targetCell.setBackground(null); // 清除背景色
+        }
     }
+
+    private View getBoardViewByTag(int index) {
+        return puzzleBoard.findViewWithTag(index);
+    }
+
     private void PushPieceWait(PuzzlePiece piece){
         pieceAdapter.addPiece(piece);
     }
     private void PushPieceBoard(PuzzlePiece piece,int position){
+        UpdatePieceBoard(getBoardViewByTag(position), piece);
         puzzlePiecesDone[position]=piece;
     }
     private void DeletePieceWait(PuzzlePiece piece){
-        puzzlePieces.remove(piece);
+        pieceAdapter.removePiece(puzzlePieces.indexOf(piece));
     }
     private void DeletePieceBoard(int position){
+        UpdatePieceBoard(getBoardViewByTag(position), null);
         puzzlePiecesDone[position]=null;
     }
     private void PerformMove(PieceMovement movement){
@@ -257,6 +337,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         PerformMove(move);
         generalmove.addMove(move);
         moveHistory.push(generalmove);
+        incrementMoves();
         checkCompletion();
     }
     private void undoComplexMove(){
@@ -284,6 +365,63 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             endGame();
         }
     }
+
+    @Override
+    public void onPieceLongClick(View view, int position) {
+        // Prevent long click from list if board is full
+        if(puzzlePieces.isEmpty()) return;
+
+        if(selectedPieceExactA!=null){
+            darkenPieceBackground(selectedPieceExactA);
+        }
+        PuzzlePiece piece = pieceAdapter.getPiece(position);
+        selectedPieceExactA = new PieceExact(piece.getOriginalIndex(), PositionType.PieceInWait);
+
+        View.DragShadowBuilder myShadow = new View.DragShadowBuilder(view);
+        view.startDragAndDrop(null, myShadow, view, 0);
+
+        view.setVisibility(View.INVISIBLE);
+    }
+
+    @Override
+    public boolean onDrag(View v, DragEvent event) {
+        // 将 v 转换为目标单元格，这在大多数事件中都是安全的
+        ImageView targetCell = (ImageView) v;
+
+        switch (event.getAction()) {
+            case DragEvent.ACTION_DROP:
+                int PositionID = (int) targetCell.getTag();
+                selectedPieceExactB = new PieceExact(PositionID, PositionType.PieceInBoard);
+                if(!selectedPieceExactB.equal(selectedPieceExactA))
+                    PerformComplexMove(new PieceMovement(selectedPieceExactA, selectedPieceExactB));
+                selectedPieceExactA = selectedPieceExactB = null;
+                return true;
+
+            case DragEvent.ACTION_DRAG_ENDED:
+                View draggedView = (View) event.getLocalState();
+                if (!event.getResult()) {
+                    if (draggedView != null) {
+                        draggedView.setVisibility(View.VISIBLE);
+                    }
+                }
+                return true;
+
+            default:
+                return false;
+        }
+    }
+    public void ClearHighLight(){
+        for (int i = 0; i < puzzleBoard.getChildCount(); i++) {
+            View cell = puzzleBoard.getChildAt(i);
+            if (((ImageView) cell).getDrawable() == null) {
+                cell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+            } else {
+                cell.setBackground(null);
+            }
+        }
+    }
+
+
     private int getAdapterPiecePosition(int originalIndex) {
         for (int i=0; i < puzzlePieces.size(); i++) {
             if (puzzlePieces.get(i).getOriginalIndex() == originalIndex) {
@@ -324,7 +462,107 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         return null;
     }
 
-    // TODO : wait for fix return to main page
+    private void solvePuzzleAnimated() {
+        // 1. Stop timer and disable all user interactions
+        timerHandler.removeCallbacks(timerRunnable);
+        disableAllInteractions();
+
+        // 2. Generate a fresh, ordered list of the correct pieces
+        if (imageUriString != null) {
+            solvedPiecesForAnimation = ImageSplitter.splitImage(this, Uri.parse(imageUriString), difficulty);
+        } else {
+            solvedPiecesForAnimation = ImageSplitter.splitImage(this, R.drawable.puzzle_default, difficulty);
+        }
+
+        if (solvedPiecesForAnimation == null) {
+            Toast.makeText(this, "无法完成拼图，图片加载失败", Toast.LENGTH_SHORT).show();
+            enableAllInteractions(); // Re-enable interactions if solving fails
+            return;
+        }
+
+        // 3. Clear current game state
+        puzzlePieces.clear();
+        puzzlePiecesDone.clear();
+        if (pieceAdapter != null) {
+            pieceAdapter.notifyDataSetChanged();
+        }
+        piecesRecyclerView.setVisibility(View.GONE);
+
+        for (int i = 0; i < puzzleBoard.getChildCount(); i++) {
+            ImageView cell = (ImageView) puzzleBoard.getChildAt(i);
+            cell.setImageDrawable(null);
+            cell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+        }
+
+        // 4. Start the animation sequence
+        solveAnimationIndex = 0;
+        solveHandler.post(solveRunnable);
+    }
+
+    private final Runnable solveRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (solvedPiecesForAnimation != null && solveAnimationIndex < solvedPiecesForAnimation.size()) {
+                PuzzlePiece piece = solvedPiecesForAnimation.get(solveAnimationIndex);
+                int correctIndex = piece.getOriginalIndex();
+                ImageView targetCell = (ImageView) puzzleBoard.getChildAt(correctIndex);
+
+                if (targetCell != null) {
+                    targetCell.setImageBitmap(piece.getPieceBitmap());
+                    targetCell.setBackground(null);
+
+                    // Create and start animation programmatically
+                    AlphaAnimation fadeIn = new AlphaAnimation(0.0f, 1.0f);
+                    fadeIn.setInterpolator(new AccelerateInterpolator());
+                    fadeIn.setDuration(300); // A bit faster for a snappier feel
+                    fadeIn.setFillAfter(true);
+                    targetCell.startAnimation(fadeIn);
+
+                    puzzlePiecesDoneIndex[correctIndex / difficulty][correctIndex % difficulty] = correctIndex;
+                    puzzlePiecesDone.add(piece);
+                }
+
+                solveAnimationIndex++;
+                solveHandler.postDelayed(this, 150); // Delay for next piece
+            } else {
+                // All pieces are placed, wait for animations to finish, then end game.
+                new Handler(Looper.getMainLooper()).postDelayed(GamePlayActivity.this::checkCompletion, 500);
+            }
+        }
+    };
+
+    private void disableAllInteractions() {
+        if (optionsMenu != null) {
+            optionsMenu.findItem(R.id.action_solve).setEnabled(false);
+            optionsMenu.findItem(R.id.action_hint).setEnabled(false);
+            optionsMenu.findItem(R.id.action_undo).setEnabled(false);
+            optionsMenu.findItem(R.id.action_view_original).setEnabled(false);
+        }
+
+        piecesRecyclerView.setEnabled(false);
+        if (pieceAdapter != null) {
+            pieceAdapter.setClickListener(null);
+        }
+
+        for (int i = 0; i < puzzleBoard.getChildCount(); i++) {
+            View cell = puzzleBoard.getChildAt(i);
+            cell.setOnClickListener(null);
+            cell.setOnLongClickListener(null);
+            cell.setOnDragListener(null);
+        }
+    }
+
+    private void enableAllInteractions() {
+        if (optionsMenu != null) {
+            optionsMenu.findItem(R.id.action_solve).setEnabled(true);
+            optionsMenu.findItem(R.id.action_hint).setEnabled(true);
+            optionsMenu.findItem(R.id.action_undo).setEnabled(true);
+            optionsMenu.findItem(R.id.action_view_original).setEnabled(true);
+        }
+        // This part is for robustness, in case you want to allow restarting the game
+        // without leaving the activity. For now, it's mainly for the error path.
+    }
+
     private void endGame() {
         timerHandler.removeCallbacks(timerRunnable);
         long millis = System.currentTimeMillis() - startTime;
@@ -357,7 +595,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             showOriginalImage();
             return true;
         } else if (itemId == R.id.action_undo) {
-            undoLastMove();
+            undoComplexMove();
             return true;
         } else if (itemId == R.id.action_solve) {
             solvePuzzleAnimated();

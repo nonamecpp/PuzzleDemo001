@@ -46,8 +46,10 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f3a18cad-d995-4547-931c-6c2245f67df1" name="Changes" comment="">
+    <list default="true" id="f3a18cad-d995-4547-931c-6c2245f67df1" name="Changes" comment="fixup! remake move">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePlayActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePlayActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/PieceExact.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/PieceExact.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -271,7 +273,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763566963207</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="fixup! remake move">
+      <option name="closed" value="true" />
+      <created>1763706399684</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1763706399684</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -287,7 +297,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="final 1.0.0.1" />
-    <option name="LAST_COMMIT_MESSAGE" value="final 1.0.0.1" />
+    <MESSAGE value="fixup! remake move" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixup! remake move" />
   </component>
   <component name="play_dynamic_filters_status">
     <option name="appIdToCheckInfo">
