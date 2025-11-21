@@ -301,7 +301,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
                     int nx = i/difficulty + dx[tmp];
                     int ny = i%difficulty + dy[tmp];
                     if(nx<0 || ny<0 || nx>=difficulty || ny >=difficulty
-                            || (puzzlePiecesDone[nx*difficulty+ny] != null && puzzlePiecesDone[nx*difficulty+ny].isCorrect()){
+                            || (puzzlePiecesDone[nx*difficulty+ny] != null && puzzlePiecesDone[nx*difficulty+ny].isCorrect())){
                         pobChoice.add(i);
                     }
                 }
