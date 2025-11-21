@@ -12,7 +12,8 @@
         android:layout_height="150dp"
         android:layout_marginBottom="24dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/default_puzzle_image" />
+        android:src="@drawable/puzzle_default" /> <!-- 修改为指向真正的 .jpg 图片 -->
+
 
     <Button
         android:id="@+id/importImageButton"
