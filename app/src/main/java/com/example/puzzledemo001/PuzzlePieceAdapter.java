@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.Collections;
@@ -40,6 +41,7 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
     public void onBindViewHolder(@NonNull PieceViewHolder holder, int position) {
         PuzzlePiece piece = pieces.get(position);
         holder.pieceImageView.setImageBitmap(piece.getPieceBitmap());
+        holder.pieceImageView.setBackgroundColor(ContextCompat.getColor(holder.itemView.getContext(), android.R.color.background_light));
 
         // Set the tag to the position, so we can identify the piece during drag
         holder.itemView.setTag(piece.getOriginalIndex());

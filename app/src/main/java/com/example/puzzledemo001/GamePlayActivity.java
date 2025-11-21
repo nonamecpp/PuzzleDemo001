@@ -168,7 +168,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             cell.setOnLongClickListener(v -> {
                 int sourceIndex = (int) v.getTag();
                 // 查找当前长按的格子上是否真的有碎片
-                PuzzlePiece sourcePiece = findPieceByCurrentIndex(sourceIndex);
+                PuzzlePiece sourcePiece = puzzlePiecesDone[sourceIndex];
 
                 // 新的逻辑：只要这个格子里确实有碎片，就允许启动拖拽
                 if (sourcePiece != null) {
@@ -214,7 +214,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         pieceAdapter = new PuzzlePieceAdapter(puzzlePieces);
         pieceAdapter.setClickListener(this);
         piecesRecyclerView.setAdapter(pieceAdapter);
-
+        ClearRecyclerHighLight();
         // Reset stats and start timer
         movesCount = 0;
         if (movesText != null) {
@@ -288,6 +288,13 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         }
     }
 
+    private void decrementMoves() {
+        movesCount--;
+        if (movesText != null) {
+            movesText.setText("步数: " + movesCount);
+        }
+    }
+
     private void UpdatePieceBoard(int PositionID, PuzzlePiece piece) {
         // 1. 把 View 强转为 ImageView，这样才能设置图片
         ImageView targetCell = (ImageView) getBoardViewByTag(PositionID);
@@ -316,7 +323,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         puzzlePiecesDone[position]=piece;
     }
     private void DeletePieceWait(PuzzlePiece piece){
-        pieceAdapter.removePiece(puzzlePieces.indexOf(piece));
+        pieceAdapter.removePiece(getAdapterPiecePosition(piece.getOriginalIndex()));
     }
     private void DeletePieceBoard(int position){
         UpdatePieceBoard(position, null);
@@ -328,7 +335,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         PieceExact origin = movement.Origin;
         PieceExact target = movement.Target;
         if(origin.getType() == PositionType.PieceInWait && target.getType() == PositionType.PieceInBoard){
-            PuzzlePiece piece = puzzlePieces.get(getAdapterPiecePosition(origin.getPostionID()));
+            PuzzlePiece piece = pieceAdapter.getPiece(getAdapterPiecePosition(origin.getPostionID()));
             piece.setCurrentIndex(target.getPostionID());
             DeletePieceWait(piece);
             PushPieceBoard(piece, target.getPostionID());
@@ -349,6 +356,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     private void UndoLastMove(PieceMovement movement){
         movement.setUndo();
         PerformMove(movement);
+        decrementMoves();
     }
     private void PerformComplexMove(PieceMovement move) {
         ComplexMovement generalmove = new ComplexMovement();
@@ -367,18 +375,19 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         generalmove.addMove(move);
         moveHistory.push(generalmove);
         incrementMoves();
+        ClearRecyclerHighLight();
         checkCompletion();
     }
     private void undoComplexMove(){
         if(moveHistory.isEmpty())return;
         ComplexMovement move = moveHistory.pop();
-        for(PieceMovement movement = move.begin();movement!=null;movement = move.next()) {
+        for(PieceMovement movement = move.end();movement!=null;movement = move.previous()) {
             UndoLastMove(movement);
-            System.console().printf("Move " + movement.Origin.getPostionID() + " to " + movement.Target.getPostionID() + "\n");
-            System.console().printf("     " + movement.Origin.getType() + " to " + movement.Target.getType() + "\n");
+//            System.console().printf("Move " + movement.Origin.getPostionID() + " to " + movement.Target.getPostionID() + "\n");
+//            System.console().printf("     " + movement.Origin.getType() + " to " + movement.Target.getType() + "\n");
         }
-        System.console().printf("undo complete\n");
-        ClearHighLight();
+//        System.console().printf("undo complete\n");
+//        ClearHighLight();
     }
     private void checkCompletion() {
         if (!puzzlePieces.isEmpty()) return; // Don't check until all pieces are on the board
@@ -492,11 +501,16 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
                 cell.setBackground(null);
             }
         }
+    }
+    public void ClearRecyclerHighLight(){
         for(int i = 0;i<piecesRecyclerView.getChildCount();i++){
             piecesRecyclerView.getChildAt(i).setVisibility(View.VISIBLE);
         }
+        for(int i = 0;i<piecesRecyclerView.getChildCount();i++) {
+            View cell = piecesRecyclerView.getChildAt(i);
+            cell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.background_light));
+        }
     }
-
 
     private int getAdapterPiecePosition(int originalIndex) {
         for (int i=0; i < puzzlePieces.size(); i++) {
