@@ -1,7 +1,5 @@
 package com.example.puzzledemo001;
 
-import android.content.ClipData;
-import android.content.ClipDescription;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +16,7 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
 
     // Listener for when an item is clicked or dragged
     public interface OnPieceClickListener {
+        void onPieceClick(View view, int position);
         void onPieceLongClick(View view, int position);
     }
     private OnPieceClickListener clickListener;
@@ -28,8 +27,6 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
 
     public PuzzlePieceAdapter(List<PuzzlePiece> pieces) {
         this.pieces = pieces;
-        // Shuffle the pieces to make the game challenging
-        Collections.shuffle(this.pieces);
     }
 
     @NonNull
@@ -47,6 +44,12 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
         // Set the tag to the position, so we can identify the piece during drag
         holder.itemView.setTag(position);
 
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onPieceClick(v, holder.getAdapterPosition());
+            }
+        });
+
         holder.itemView.setOnLongClickListener(v -> {
             if (clickListener != null) {
                 clickListener.onPieceLongClick(v, holder.getAdapterPosition());
@@ -56,7 +59,10 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
     }
 
     public PuzzlePiece getPiece(int position) {
-        return pieces.get(position);
+        if (position >= 0 && position < pieces.size()) {
+            return pieces.get(position);
+        }
+        return null;
     }
     
     public void removePiece(int position) {
@@ -66,12 +72,14 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
             notifyItemRangeChanged(position, pieces.size());
         }
     }
-    public void undoPiece(PuzzlePiece piece) {
-        if(piece!=null){
-            piece.setCurrentIndex(-1);
+    public void addPiece(PuzzlePiece piece){
+        if(piece != null){
             pieces.add(piece);
+            notifyItemInserted(pieces.size() - 1);
+            notifyItemRangeChanged(pieces.size()-1, pieces.size());
         }
     }
+    
     @Override
     public int getItemCount() {
         return pieces.size();
