@@ -40,16 +40,40 @@
           <theme>@style/Theme.PuzzleDemo001</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/activity_game_pre_launch.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/activity_game_prepare.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/item_puzzle_piece.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/menu/game_menu.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
     </layouts>
   </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f3a18cad-d995-4547-931c-6c2245f67df1" name="Changes" comment="fixup! remake move">
+    <list default="true" id="f3a18cad-d995-4547-931c-6c2245f67df1" name="Changes" comment="complete movement">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePlayActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePlayActivity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/PieceExact.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/PieceExact.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePreLaunchActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePreLaunchActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/PuzzlePieceAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/PuzzlePieceAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_play.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_play.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_pre_launch.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_pre_launch.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,8 +129,8 @@
     </option>
     <option name="PUSH_TAGS">
       <GitPushTagMode>
-        <option name="argument" value="--tags" />
-        <option name="title" value="All" />
+        <option name="argument" value="--follow-tags" />
+        <option name="title" value="Current Branch" />
       </GitPushTagMode>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -148,7 +172,7 @@
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;branch1&quot;,
     &quot;last_opened_file_path&quot;: &quot;D:/Android/AndroidStudioProjects/PuzzleDemo001-master&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.google.gct.login2.settings.GoogleLoginApplicationSettingsConfigurableProvider&quot;
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.web.browsers&quot;
   }
 }</component>
   <component name="RunManager">
@@ -281,7 +305,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763706399684</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="complete movement">
+      <option name="closed" value="true" />
+      <created>1763719053208</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1763719053208</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -298,19 +330,20 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="final 1.0.0.1" />
     <MESSAGE value="fixup! remake move" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixup! remake move" />
+    <MESSAGE value="complete movement" />
+    <option name="LAST_COMMIT_MESSAGE" value="complete movement" />
   </component>
   <component name="play_dynamic_filters_status">
     <option name="appIdToCheckInfo">
       <map>
         <entry key="com.example.puzzledemo001">
           <value>
-            <CheckInfo lastCheckTimestamp="1763470525623" />
+            <CheckInfo lastCheckTimestamp="1763722452694" />
           </value>
         </entry>
         <entry key="com.example.puzzledemo001.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1763470525623" />
+            <CheckInfo lastCheckTimestamp="1763722452694" />
           </value>
         </entry>
       </map>

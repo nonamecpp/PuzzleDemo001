@@ -81,6 +81,19 @@
             android:textColor="@android:color/white"
             android:textSize="22sp" />
 
+        <!-- ============== 在这里添加按钮 ============== -->
+        <Button
+            android:id="@+id/backToMenuButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:text="返回主菜单"
+            android:textSize="18sp" />
+        <!-- ============================================== -->
+
     </LinearLayout>
+
 
 </RelativeLayout>

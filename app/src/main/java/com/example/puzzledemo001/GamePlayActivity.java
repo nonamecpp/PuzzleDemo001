@@ -1,7 +1,12 @@
 package com.example.puzzledemo001;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ArgbEvaluator;
+import android.animation.ValueAnimator;
 import android.content.ClipData;
 import android.content.ClipDescription;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -10,14 +15,16 @@ import android.view.DragEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.animation.AccelerateInterpolator;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.BitmapFactory;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -32,6 +39,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Stack;
+
 
 public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAdapter.OnPieceClickListener, View.OnDragListener {
 
@@ -66,9 +74,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
 
     // --- Variables for Animated Solve ---
     private Menu optionsMenu;
-    private Handler solveHandler = new Handler(Looper.getMainLooper());
-    private List<PuzzlePiece> solvedPiecesForAnimation;
-    private int solveAnimationIndex = 0;
+
     // --- End Variables for Animated Solve ---
 
     private Runnable timerRunnable = new Runnable() {
@@ -92,6 +98,25 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game_play);
 
+        // ============== 在这里粘贴代码 ==============
+        Button backToMenuButton = findViewById(R.id.backToMenuButton);
+        backToMenuButton.setOnClickListener(v -> {
+            // 创建一个意图 (Intent) 来启动您的主菜单 Activity
+            // MainActivity.class 是您项目的主入口，这里是正确的
+            android.content.Intent intent = new android.content.Intent(GamePlayActivity.this, MainActivity.class);
+
+            // 添加这个 Flag 是为了清空当前的游戏任务栈，
+            // 这样当用户在主菜单按返回键时，不会再回到刚刚结束的游戏界面。
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            // 启动主菜单 Activity
+            startActivity(intent);
+
+            // 结束当前的游戏 Activity
+            finish();
+        });
+        // ============================================
+
         initializeViews();
         setSupportActionBar(gameToolbar);
         if (getSupportActionBar() != null) {
@@ -106,6 +131,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         piecesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
         startGame();
+
     }
 
     private void initializeViews() {
@@ -121,7 +147,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     private void setupPuzzleBoard() {
         puzzleBoard.setColumnCount(difficulty);
         puzzleBoard.setRowCount(difficulty);
-
+        moveHistory = new Stack<>();
         int totalCells = difficulty * difficulty;
         for (int i = 0; i < totalCells; i++) {
             ImageView cell = new ImageView(this);
@@ -146,9 +172,11 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
 
                 // 新的逻辑：只要这个格子里确实有碎片，就允许启动拖拽
                 if (sourcePiece != null) {
-                    ClipData.Item item = new ClipData.Item(Integer.toString(sourceIndex));
+                    if(selectedPieceExactA!=null)
+                        darkenPieceBackground(selectedPieceExactA);
+                    selectedPieceExactA = new PieceExact(sourceIndex, PositionType.PieceInBoard);
                     // 使用 "board_piece" 标签来标识这次拖拽源自棋盘
-                    ClipData dragData = new ClipData("board_piece", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
+                    ClipData dragData = ClipData.newPlainText("Piece", "PieceInBoard");
                     View.DragShadowBuilder myShadow = new View.DragShadowBuilder(v);
                     v.startDragAndDrop(dragData, myShadow, v, 0);
                     return true;
@@ -165,11 +193,10 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     }
 
     private void startGame() {
-        if (imageUriString != null) {
-            puzzlePieces = ImageSplitter.splitImage(this, Uri.parse(imageUriString), difficulty);
-        } else {
-            puzzlePieces = ImageSplitter.splitImage(this, R.drawable.puzzle_default, difficulty);
-        }
+        Uri imageUri = Uri.parse(imageUriString);
+        puzzlePieces = ImageSplitter.splitImage(this, imageUri, difficulty);
+
+        // --- 修正结束 ---
 
         if (puzzlePieces == null || puzzlePieces.isEmpty()) {
             Toast.makeText(this, "图片加载失败，使用默认图片", Toast.LENGTH_LONG).show();
@@ -221,8 +248,8 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         return view;
     }
     @Override
-    public void onPieceClick(View view, int position) {
-
+    public void onPieceClick(View view, int PositionID) {
+        int position = getAdapterPiecePosition(PositionID);
         PuzzlePiece piece = pieceAdapter.getPiece(position);
         if(selectedPieceExactA != null){
             View v = getBoardViewByTag(getExactpiecePosition(selectedPieceExactA));
@@ -236,14 +263,15 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     private void handleCellClick(View v) {
         ImageView targetCell = (ImageView) v;
         int PositionID = (int) targetCell.getTag();
-        PuzzlePiece occupant = findPieceByCurrentIndex(PositionID); // 查找当前格子上是否已有碎片
+        PuzzlePiece occupant = puzzlePiecesDone[PositionID]; // 查找当前格子上是否已有碎片
 
         if (selectedPieceExactA != null) {
             selectedPieceExactB = new PieceExact(PositionID, PositionType.PieceInBoard);
-            darkenPieceBackground(selectedPieceExactA);
 
             if(!selectedPieceExactB.equal(selectedPieceExactA))
                 PerformComplexMove(new PieceMovement(selectedPieceExactA, selectedPieceExactB));
+            if(selectedPieceExactA.getType()!=PositionType.PieceInWait)
+                darkenPieceBackground(selectedPieceExactA);
             selectedPieceExactA = selectedPieceExactB = null;
 
         } else {
@@ -260,16 +288,17 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         }
     }
 
-    private void UpdatePieceBoard(View v, PuzzlePiece piece) {
+    private void UpdatePieceBoard(int PositionID, PuzzlePiece piece) {
         // 1. 把 View 强转为 ImageView，这样才能设置图片
-        ImageView targetCell = (ImageView) v;
-
+        ImageView targetCell = (ImageView) getBoardViewByTag(PositionID);
+        if(targetCell == null)return;
         if (piece == null) {
             // 如果传进来的 piece 是 null，说明要把这个格子清空
             targetCell.setImageDrawable(null); // 清除图片
             targetCell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray)); // 恢复灰色背景
         } else {
             // 如果有 piece，显示它的图片
+            targetCell.setScaleType(ImageView.ScaleType.FIT_XY);
             targetCell.setImageBitmap(piece.getPieceBitmap());
             targetCell.setBackground(null); // 清除背景色
         }
@@ -283,14 +312,14 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         pieceAdapter.addPiece(piece);
     }
     private void PushPieceBoard(PuzzlePiece piece,int position){
-        UpdatePieceBoard(getBoardViewByTag(position), piece);
+        UpdatePieceBoard(position, piece);
         puzzlePiecesDone[position]=piece;
     }
     private void DeletePieceWait(PuzzlePiece piece){
         pieceAdapter.removePiece(puzzlePieces.indexOf(piece));
     }
     private void DeletePieceBoard(int position){
-        UpdatePieceBoard(getBoardViewByTag(position), null);
+        UpdatePieceBoard(position, null);
         puzzlePiecesDone[position]=null;
     }
     private void PerformMove(PieceMovement movement){
@@ -307,7 +336,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         else if(origin.getType() == PositionType.PieceInBoard && target.getType() == PositionType.PieceInBoard){
             PuzzlePiece piece = puzzlePiecesDone[origin.getPostionID()];
             piece.setCurrentIndex(target.getPostionID());
-            DeletePieceBoard(target.getPostionID());
+            DeletePieceBoard(origin.getPostionID());
             PushPieceBoard(piece, target.getPostionID());
         }
         else if(origin.getType() == PositionType.PieceInBoard && target.getType() == PositionType.PieceInWait){
@@ -345,7 +374,11 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         ComplexMovement move = moveHistory.pop();
         for(PieceMovement movement = move.begin();movement!=null;movement = move.next()) {
             UndoLastMove(movement);
+            System.console().printf("Move " + movement.Origin.getPostionID() + " to " + movement.Target.getPostionID() + "\n");
+            System.console().printf("     " + movement.Origin.getType() + " to " + movement.Target.getType() + "\n");
         }
+        System.console().printf("undo complete\n");
+        ClearHighLight();
     }
     private void checkCompletion() {
         if (!puzzlePieces.isEmpty()) return; // Don't check until all pieces are on the board
@@ -362,13 +395,28 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         }
 
         if (allCorrect) {
-            endGame();
+            // --- 核心修正：添加延迟 ---
+            // 1. 立即停止计时器
+            timerHandler.removeCallbacks(timerRunnable);
+
+            // 2. 禁用所有可交互的UI元素，防止用户在延迟期间进行多余操作
+            piecesRecyclerView.setEnabled(false); // 禁用底部列表的交互
+
+            // 3. 使用 Handler 延迟执行 endGame()
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    // 这部分代码将在 2 秒后执行
+                    endGame();
+                }
+            }, 2000); // 这里的 2000 代表延迟 2000 毫秒 (2秒)，您可以按需修改
         }
     }
 
     @Override
-    public void onPieceLongClick(View view, int position) {
+    public void onPieceLongClick(View view, int PositionID) {
         // Prevent long click from list if board is full
+        int position = getAdapterPiecePosition(PositionID);
         if(puzzlePieces.isEmpty()) return;
 
         if(selectedPieceExactA!=null){
@@ -377,8 +425,10 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         PuzzlePiece piece = pieceAdapter.getPiece(position);
         selectedPieceExactA = new PieceExact(piece.getOriginalIndex(), PositionType.PieceInWait);
 
+        ClipData data = ClipData.newPlainText("Piece","PieceInWait");
+
         View.DragShadowBuilder myShadow = new View.DragShadowBuilder(view);
-        view.startDragAndDrop(null, myShadow, view, 0);
+        view.startDragAndDrop(data, myShadow, view, 0);
 
         view.setVisibility(View.INVISIBLE);
     }
@@ -389,12 +439,33 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         ImageView targetCell = (ImageView) v;
 
         switch (event.getAction()) {
+            case DragEvent.ACTION_DRAG_STARTED:
+                // ACTION_DRAG_STARTED 中无法获取 ClipData 内容 (returns null)，只能检查 MIME Type
+                if (event.getClipDescription().hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                    return true;
+                }
+                return false;
+            case DragEvent.ACTION_DRAG_ENTERED:
+                // 【新增】进入时高亮
+                targetCell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+                return true;
+            case DragEvent.ACTION_DRAG_EXITED:
+                // 【新增】离开时取消高亮，恢复原样
+                // 注意：只有当格子上没有图片时才恢复灰色背景
+                if (targetCell.getDrawable() == null) {
+                    targetCell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+                } else {
+                    targetCell.setBackground(null); // 如果有图，则背景应为透明
+                }
+                return true;
             case DragEvent.ACTION_DROP:
                 int PositionID = (int) targetCell.getTag();
                 selectedPieceExactB = new PieceExact(PositionID, PositionType.PieceInBoard);
                 if(!selectedPieceExactB.equal(selectedPieceExactA))
                     PerformComplexMove(new PieceMovement(selectedPieceExactA, selectedPieceExactB));
                 selectedPieceExactA = selectedPieceExactB = null;
+                // 【重要】在放下后也清除一下高亮，因为 ACTION_DRAG_EXITED 可能不被触发
+                ClearHighLight();
                 return true;
 
             case DragEvent.ACTION_DRAG_ENDED:
@@ -405,7 +476,9 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
                     }
                 }
                 return true;
-
+            case DragEvent.ACTION_DRAG_LOCATION:
+                // 通常忽略
+                return true;
             default:
                 return false;
         }
@@ -418,6 +491,9 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
             } else {
                 cell.setBackground(null);
             }
+        }
+        for(int i = 0;i<piecesRecyclerView.getChildCount();i++){
+            piecesRecyclerView.getChildAt(i).setVisibility(View.VISIBLE);
         }
     }
 
@@ -434,7 +510,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     public PieceMovement getTip() {
         List<Integer>pobChoice = new ArrayList<>();
         for(int i =0;i<difficulty*difficulty;i++){
-            if(!puzzlePiecesDone[i].isCorrect() || puzzlePiecesDone[i] == null){
+            if(puzzlePiecesDone[i] == null || !puzzlePiecesDone[i].isCorrect()){
                 for(int tmp = 0;tmp<4;tmp++){
                     int nx = i/difficulty + dx[tmp];
                     int ny = i%difficulty + dy[tmp];
@@ -462,106 +538,6 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         return null;
     }
 
-    private void solvePuzzleAnimated() {
-        // 1. Stop timer and disable all user interactions
-        timerHandler.removeCallbacks(timerRunnable);
-        disableAllInteractions();
-
-        // 2. Generate a fresh, ordered list of the correct pieces
-        if (imageUriString != null) {
-            solvedPiecesForAnimation = ImageSplitter.splitImage(this, Uri.parse(imageUriString), difficulty);
-        } else {
-            solvedPiecesForAnimation = ImageSplitter.splitImage(this, R.drawable.puzzle_default, difficulty);
-        }
-
-        if (solvedPiecesForAnimation == null) {
-            Toast.makeText(this, "无法完成拼图，图片加载失败", Toast.LENGTH_SHORT).show();
-            enableAllInteractions(); // Re-enable interactions if solving fails
-            return;
-        }
-
-        // 3. Clear current game state
-        puzzlePieces.clear();
-        puzzlePiecesDone.clear();
-        if (pieceAdapter != null) {
-            pieceAdapter.notifyDataSetChanged();
-        }
-        piecesRecyclerView.setVisibility(View.GONE);
-
-        for (int i = 0; i < puzzleBoard.getChildCount(); i++) {
-            ImageView cell = (ImageView) puzzleBoard.getChildAt(i);
-            cell.setImageDrawable(null);
-            cell.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
-        }
-
-        // 4. Start the animation sequence
-        solveAnimationIndex = 0;
-        solveHandler.post(solveRunnable);
-    }
-
-    private final Runnable solveRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (solvedPiecesForAnimation != null && solveAnimationIndex < solvedPiecesForAnimation.size()) {
-                PuzzlePiece piece = solvedPiecesForAnimation.get(solveAnimationIndex);
-                int correctIndex = piece.getOriginalIndex();
-                ImageView targetCell = (ImageView) puzzleBoard.getChildAt(correctIndex);
-
-                if (targetCell != null) {
-                    targetCell.setImageBitmap(piece.getPieceBitmap());
-                    targetCell.setBackground(null);
-
-                    // Create and start animation programmatically
-                    AlphaAnimation fadeIn = new AlphaAnimation(0.0f, 1.0f);
-                    fadeIn.setInterpolator(new AccelerateInterpolator());
-                    fadeIn.setDuration(300); // A bit faster for a snappier feel
-                    fadeIn.setFillAfter(true);
-                    targetCell.startAnimation(fadeIn);
-
-                    puzzlePiecesDoneIndex[correctIndex / difficulty][correctIndex % difficulty] = correctIndex;
-                    puzzlePiecesDone.add(piece);
-                }
-
-                solveAnimationIndex++;
-                solveHandler.postDelayed(this, 150); // Delay for next piece
-            } else {
-                // All pieces are placed, wait for animations to finish, then end game.
-                new Handler(Looper.getMainLooper()).postDelayed(GamePlayActivity.this::checkCompletion, 500);
-            }
-        }
-    };
-
-    private void disableAllInteractions() {
-        if (optionsMenu != null) {
-            optionsMenu.findItem(R.id.action_solve).setEnabled(false);
-            optionsMenu.findItem(R.id.action_hint).setEnabled(false);
-            optionsMenu.findItem(R.id.action_undo).setEnabled(false);
-            optionsMenu.findItem(R.id.action_view_original).setEnabled(false);
-        }
-
-        piecesRecyclerView.setEnabled(false);
-        if (pieceAdapter != null) {
-            pieceAdapter.setClickListener(null);
-        }
-
-        for (int i = 0; i < puzzleBoard.getChildCount(); i++) {
-            View cell = puzzleBoard.getChildAt(i);
-            cell.setOnClickListener(null);
-            cell.setOnLongClickListener(null);
-            cell.setOnDragListener(null);
-        }
-    }
-
-    private void enableAllInteractions() {
-        if (optionsMenu != null) {
-            optionsMenu.findItem(R.id.action_solve).setEnabled(true);
-            optionsMenu.findItem(R.id.action_hint).setEnabled(true);
-            optionsMenu.findItem(R.id.action_undo).setEnabled(true);
-            optionsMenu.findItem(R.id.action_view_original).setEnabled(true);
-        }
-        // This part is for robustness, in case you want to allow restarting the game
-        // without leaving the activity. For now, it's mainly for the error path.
-    }
 
     private void endGame() {
         timerHandler.removeCallbacks(timerRunnable);
@@ -576,14 +552,14 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         piecesRecyclerView.setVisibility(View.GONE);
         Toast.makeText(this, "恭喜你，完成了拼图！", Toast.LENGTH_LONG).show();
     }
-    // Done
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.game_menu, menu);
         this.optionsMenu = menu; // Store the menu instance
         return true;
     }
-    // TODO: lack of action
+
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
@@ -597,41 +573,186 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         } else if (itemId == R.id.action_undo) {
             undoComplexMove();
             return true;
-        } else if (itemId == R.id.action_solve) {
-            solvePuzzleAnimated();
-            return true;
         } else if (itemId == R.id.action_hint) {
-            Toast.makeText(this, "提示功能待实现", Toast.LENGTH_SHORT).show();
+            // 调用 getTip() 获取提示
+            selectedPieceExactA = selectedPieceExactB = null;
+            PieceMovement tip = getTip();
+            if (tip == null) {
+                // 如果没有可用的提示（可能拼图已完成或出现意外情况）
+                Toast.makeText(this, "没有可用的提示或拼图已完成", Toast.LENGTH_SHORT).show();
+            } else {
+                // 如果获取到了提示，就执行提示效果
+                showHint(tip);
+            }
             return true;
         } else {
             return super.onOptionsItemSelected(item);
         }
     }
-    // Done
+
+    /**
+     * 根据 getTip() 返回的结果，在界面上高亮显示提示
+     * @param tip 包含提示信息的对象
+     */
+    private void showHint(PieceMovement tip) {
+        if (tip == null) return; // 安全检查
+        PieceExact origin = tip.Origin;
+        PieceExact target = tip.Target;
+        int sourceIndex = getExactpiecePosition(origin);
+        int targetIndex = getExactpiecePosition(target);
+        if (origin.getType() == PositionType.PieceInWait) {
+            // Plan A 的提示：源于【待选列表】-> 目标是【棋盘】
+
+            piecesRecyclerView.smoothScrollToPosition(sourceIndex);
+
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                RecyclerView.ViewHolder holder = piecesRecyclerView.findViewHolderForAdapterPosition(sourceIndex);
+                View pieceView = (holder != null) ? holder.itemView : null;
+                View boardCell = puzzleBoard.getChildAt(targetIndex);
+
+                // --- 核心修正：解耦动画调用，确保它们能独立执行 ---
+                // 1. 只要找到下方的块，就闪烁它
+                if (pieceView != null) {
+                    animateHintView(pieceView, false); // 普通闪烁
+                }
+
+                // 2. 只要找到棋盘上的目标格，就闪烁它（无论上面是空的还是被占用了）
+                if (boardCell != null) {
+                    animateHintView(boardCell, true);  // 绿色高亮
+                }
+
+                // --- 修正结束 ---
+
+            }, 300);
+
+        }  else {
+            // Plan B 的提示：源于【棋盘】-> 目标是【棋盘】
+            // 这部分是您已完美实现的功能，我们一字不改，完全保留！
+            View sourceCell = puzzleBoard.getChildAt(sourceIndex);
+            View targetCell = puzzleBoard.getChildAt(targetIndex);
+
+            if (sourceCell != null && targetCell != null) {
+                animateHintView(sourceCell, false);
+                // 完全保留您原来的调用，确保功能不被破坏
+                animateHintView(targetCell, false);
+            } else {
+                Toast.makeText(GamePlayActivity.this, "提示：请注意棋盘上的拼图块", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+
+
+
+
+
+    /**
+     * 对给定的视图执行闪烁动画
+     * @param viewToAnimate 需要执行动画的View
+     * @param isGreenHint   如果为true，则使用绿色前景闪烁；否则使用透明度闪烁。
+     */
+    private void animateHintView(View viewToAnimate, boolean isGreenHint) {
+        if (viewToAnimate == null) return;
+
+        // 清除可能正在进行的旧动画，防止冲突
+        viewToAnimate.clearAnimation();
+
+        if (isGreenHint) {
+            // --- 方案A：绿色前景闪烁 (Foreground Animation) ---
+            // 这种方式会在图片上层叠加一个半透明的颜色层来闪烁，完美解决遮挡问题。
+
+            // 1. 创建一个半透明的绿色 Drawable 作为前景
+            android.graphics.drawable.GradientDrawable foregroundDrawable = new android.graphics.drawable.GradientDrawable();
+            foregroundDrawable.setColor(ContextCompat.getColor(this, R.color.hint_green));
+
+            // 2. 将前景设置到视图上
+            viewToAnimate.setForeground(foregroundDrawable);
+
+            // 3. 创建一个 ValueAnimator 来改变前景的透明度 (从半透明 -> 完全透明)
+            ValueAnimator alphaAnimator = ValueAnimator.ofInt(150, 0); // 150是比较合适的半透明值
+            alphaAnimator.setDuration(350);
+            alphaAnimator.setRepeatCount(3);
+            alphaAnimator.setRepeatMode(ValueAnimator.REVERSE);
+
+            alphaAnimator.addUpdateListener(animation -> {
+                int alphaValue = (int) animation.getAnimatedValue();
+                // 实时更新前景的透明度
+                if (viewToAnimate.getForeground() != null) {
+                    viewToAnimate.getForeground().setAlpha(alphaValue);
+                }
+            });
+
+            alphaAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    // 动画结束后，彻底移除前景，恢复视图原状
+                    viewToAnimate.setForeground(null);
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+                    // 如果动画被取消，也移除前景
+                    viewToAnimate.setForeground(null);
+                }
+            });
+
+            alphaAnimator.start();
+
+        } else {
+            // --- 方案B：普通透明度闪烁 (AlphaAnimation) ---
+            // (此部分逻辑正确，保持不变)
+            AlphaAnimation blinkAnimation = new AlphaAnimation(1.0f, 0.2f);
+            blinkAnimation.setDuration(250);
+            blinkAnimation.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+            blinkAnimation.setRepeatCount(3);
+            blinkAnimation.setRepeatMode(Animation.REVERSE);
+            viewToAnimate.startAnimation(blinkAnimation);
+        }
+    }
+
+
+
     private void showOriginalImage() {
+        // 检查 imageUriString 是否有效，这主要是为了代码健壮性
+        if (imageUriString == null || imageUriString.isEmpty()) {
+            Toast.makeText(this, "图片资源丢失", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         ImageView imageView = new ImageView(this);
 
-        if (imageUriString != null) {
-            imageView.setImageURI(Uri.parse(imageUriString));
-        } else {
-            imageView.setImageResource(R.drawable.puzzle_default);
-        }
+        // --- 您想要保留的、非常好的设置代码 ---
+        // 设置一个最小尺寸，防止在某些设备上因为没有尺寸而显示不出来
+        imageView.setMinimumWidth(500);
+        imageView.setMinimumHeight(500);
+        // 设置缩放模式，确保图片能被看见
+        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        imageView.setAdjustViewBounds(true);
+        // --- 保留结束 ---
+
+        // --- 核心简化点在这里 ---
+        // 不再需要 if-else，无条件地使用接收到的 imageUriString 来设置图片
+        imageView.setImageURI(Uri.parse(imageUriString));
+        // --- 简化结束 ---
 
         builder.setView(imageView);
         AlertDialog dialog = builder.create();
+
+        // 添加点击图片关闭对话框的功能，提升用户体验
         imageView.setOnClickListener(v -> dialog.dismiss());
+
         dialog.show();
     }
 
+
+
     @Override
-    //Done
     protected void onPause() {
         super.onPause();
         timerHandler.removeCallbacks(timerRunnable);
-        solveHandler.removeCallbacks(solveRunnable); // Stop animation if activity is paused
     }
-    // ?
+
     private PuzzlePiece findPieceByCurrentIndex(int cellIndex) {
         for (PuzzlePiece piece : puzzlePiecesDone) {
             if (piece.getCurrentIndex() == cellIndex) {

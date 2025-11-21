@@ -42,17 +42,17 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
         holder.pieceImageView.setImageBitmap(piece.getPieceBitmap());
 
         // Set the tag to the position, so we can identify the piece during drag
-        holder.itemView.setTag(position);
+        holder.itemView.setTag(piece.getOriginalIndex());
 
         holder.itemView.setOnClickListener(v -> {
             if (clickListener != null) {
-                clickListener.onPieceClick(v, holder.getAdapterPosition());
+                clickListener.onPieceClick(v, piece.getOriginalIndex());
             }
         });
 
         holder.itemView.setOnLongClickListener(v -> {
             if (clickListener != null) {
-                clickListener.onPieceLongClick(v, holder.getAdapterPosition());
+                clickListener.onPieceLongClick(v, piece.getOriginalIndex());
             }
             return true;
         });
@@ -76,7 +76,7 @@ public class PuzzlePieceAdapter extends RecyclerView.Adapter<PuzzlePieceAdapter.
         if(piece != null){
             pieces.add(piece);
             notifyItemInserted(pieces.size() - 1);
-            notifyItemRangeChanged(pieces.size()-1, pieces.size());
+//            notifyItemRangeChanged(pieces.size()-1, pieces.size());
         }
     }
     
