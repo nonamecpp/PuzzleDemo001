@@ -40,6 +40,26 @@
           <theme>@style/Theme.PuzzleDemo001</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/activity_game_pre_launch.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/activity_game_prepare.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/item_puzzle_piece.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/menu/game_menu.xml">
+        <config>
+          <theme>@style/Theme.PuzzleDemo001</theme>
+        </config>
+      </layout>
     </layouts>
   </component>
   <component name="AutoImportSettings">
@@ -49,6 +69,12 @@
     <list default="true" id="f3a18cad-d995-4547-931c-6c2245f67df1" name="Changes" comment="ver 1.0.1.1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePlayActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePlayActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePreLaunchActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/puzzledemo001/GamePreLaunchActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/default_puzzle_image.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_play.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_play.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_pre_launch.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_game_pre_launch.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/menu/game_menu.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/menu/game_menu.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -130,21 +156,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Android App.app.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;branchA&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/Android/AndroidStudioProjects/PuzzleDemo001-master&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Android App.app.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.google.services.firebase.aqiPopupShown": "true",
+    "git-widget-placeholder": "branchA",
+    "last_opened_file_path": "D:/Android/AndroidStudioProjects/PuzzleDemo001-master",
+    "settings.editor.selected.configurable": "vcs.Git"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
       <module name="PuzzleDemo001.app" />
@@ -275,7 +302,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763567290931</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="ver 1.0.1.1">
+      <option name="closed" value="true" />
+      <created>1763650743538</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1763650743538</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -283,7 +318,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="branchA" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -299,12 +346,12 @@
       <map>
         <entry key="com.example.puzzledemo001">
           <value>
-            <CheckInfo lastCheckTimestamp="1763470525623" />
+            <CheckInfo lastCheckTimestamp="1763655497219" />
           </value>
         </entry>
         <entry key="com.example.puzzledemo001.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1763470525623" />
+            <CheckInfo lastCheckTimestamp="1763655497218" />
           </value>
         </entry>
       </map>

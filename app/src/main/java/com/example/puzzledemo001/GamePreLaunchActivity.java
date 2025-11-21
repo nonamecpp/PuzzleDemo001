@@ -83,11 +83,17 @@ public class GamePreLaunchActivity extends AppCompatActivity {
     /**
      * 设置默认图片，并初始化要使用的图片URI
      */
-    private void setupDefaultImage() {
-        // 将默认的drawable资源ID转换为Uri
-        imageToUseUri = getUriFromDrawable(this, R.drawable.default_puzzle_image);
-        previewImageView.setImageResource(R.drawable.default_puzzle_image);
+    /**
+     * 设置默认图片，并初始化要使用的图片URI
+     */
+    private void setupDefaultImage() {// 1. 将默认的drawable资源ID转换为Uri，这一行是正确的
+        imageToUseUri = getUriFromDrawable(this, R.drawable.puzzle_default);
+
+        // --- 核心修正点在这里 ---
+        // 2. 使用刚刚创建的、能被正确显示的 Uri 来设置预览图
+        previewImageView.setImageURI(imageToUseUri);
     }
+
 
     /**
      * 将drawable资源ID转换为Uri的辅助方法
