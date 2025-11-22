@@ -461,7 +461,6 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
     private void UndoLastMove(PieceMovement movement){
         movement.setUndo();
         PerformMove(movement);
-        decrementMoves();
     }
     /**
      * 执行一个“复杂”移动，这是所有游戏内移动操作的统一入口。
@@ -510,6 +509,7 @@ public class GamePlayActivity extends AppCompatActivity implements PuzzlePieceAd
         }
 //        System.console().printf("undo complete\n");
 //        ClearHighLight();
+        decrementMoves();
     }
     private void checkCompletion() {
         if (!puzzlePieces.isEmpty()) return; // Don't check until all pieces are on the board
